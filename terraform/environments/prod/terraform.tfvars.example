@@ -1,0 +1,9 @@
+aws_region           = "eu-west-3"
+project_name         = "ivolve-k8s"
+environment          = "production"
+key_name             = "k3s"
+ssh_private_key_path = "~/.ssh/k3s.pem"
+master_instance_type = "t3.medium"
+worker_instance_type = "t3.medium"
+worker_count         = 1
+availability_zones   = ["eu-west-3a", "eu-west-3b"]

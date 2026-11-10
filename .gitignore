@@ -1,0 +1,23 @@
+# Terraform local state and secrets
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl
+
+# Ansible secrets and dynamic inventory
+ansible/inventory.ini
+*.retry
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db

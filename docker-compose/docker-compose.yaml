@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: ../app
+      dockerfile: Dockerfile
+    image: marceleno17/ivolveapp:latest
+    container_name: ivolve-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - ivolve-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: ivolve-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=ivolve
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=admin123
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ivolve-net
+
+networks:
+  ivolve-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  app_logs:

@@ -1,0 +1,9 @@
+---
+- name: Check if node is already joined to cluster
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf_check
+
+- name: Join worker node to the Kubernetes cluster
+  command: "{{ hostvars['localhost']['cluster_join_command'] }}"
+  when: not kubelet_conf_check.stat.exists

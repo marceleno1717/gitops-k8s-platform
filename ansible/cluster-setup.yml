@@ -1,0 +1,20 @@
+---
+- name: Setup Prerequisites on all nodes
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - common
+    - containerd
+    - kubernetes_base
+
+- name: Initialize Kubernetes Control Plane
+  hosts: master
+  become: true
+  roles:
+    - master
+
+- name: Join Worker Nodes to Cluster
+  hosts: workers
+  become: true
+  roles:
+    - worker

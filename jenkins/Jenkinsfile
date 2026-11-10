@@ -1,0 +1,64 @@
+@Library('shared-lib') _
+
+pipeline {
+    agent {
+        label 'agent1' // Runs on dedicated containerized SSH build agent
+    }
+
+    environment {
+        IMAGE_NAME               = 'marceleno17/ivolveapp'
+        IMAGE_TAG                = "${BUILD_NUMBER}"
+        DOCKERHUB_CREDENTIALS_ID = 'docker'
+        DEPLOYMENT_FILE          = 'k8s-manifests/base/app-deployment.yaml'
+        GITHUB_CREDENTIALS_ID    = 'github'
+        GIT_AUTHOR_EMAIL         = 'maro.keko17@gmail.com'
+        GIT_REPO_URL             = 'https://github.com/marceleno1717/ivolveapp'
+    }
+
+    stages {
+        stage('1. Build App') {
+            steps {
+                echo "Installing application dependencies via shared library..."
+                dir('app') {
+                    buildJS()
+                }
+            }
+        }
+
+        stage('2. Build, Scan & Push Docker Image') {
+            steps {
+                echo "Building, scanning with Trivy, and pushing Docker image..."
+                dir('app') {
+                    buildScanPushImage("${IMAGE_NAME}:${IMAGE_TAG}", "${DOCKERHUB_CREDENTIALS_ID}")
+                }
+            }
+        }
+
+        stage('3. GitOps Push to Repo') {
+            steps {
+                echo "Triggering GitOps flow: updating manifest and committing back to Git repository..."
+                pushDeployment(
+                    "${IMAGE_NAME}",
+                    "${IMAGE_TAG}",
+                    "${DEPLOYMENT_FILE}",
+                    "${GITHUB_CREDENTIALS_ID}",
+                    "${GIT_AUTHOR_EMAIL}",
+                    "${GIT_REPO_URL}"
+                )
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "CI stage finished. Cleaning temporary credentials..."
+            sh 'docker logout || true'
+        }
+        success {
+            echo "Pipeline succeeded! GitOps manifest updated to ${IMAGE_NAME}:${IMAGE_TAG}. Argo CD will automatically sync."
+        }
+        failure {
+            echo "Pipeline failed! Please check logs for detailed diagnostic information."
+        }
+    }
+}
