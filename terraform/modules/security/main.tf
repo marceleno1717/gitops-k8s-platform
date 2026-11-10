@@ -1,3 +1,4 @@
+# Security group for Kubernetes control-plane and worker nodes
 resource "aws_security_group" "k8s_nodes" {
   name        = "${var.project_name}-k8s-nodes-sg"
   description = "Security group for Kubernetes control-plane and worker nodes"
@@ -28,6 +29,33 @@ resource "aws_security_group" "k8s_nodes" {
     to_port     = 32767
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Calico BGP (Border Gateway Protocol)
+  ingress {
+    description = "Calico networking BGP"
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  # Calico IP-in-IP
+  ingress {
+    description = "Calico IP-in-IP tunnel networking"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "4" # IP-in-IP protocol number
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  # Calico VXLAN (alternative overlay)
+  ingress {
+    description = "Calico VXLAN networking"
+    from_port   = 4789
+    to_port     = 4789
+    protocol    = "udp"
+    cidr_blocks = [var.vpc_cidr]
   }
 
   # Internal intra-cluster traffic (all protocols between nodes in VPC)

@@ -9,6 +9,7 @@ crash.*.log
 .terraform.lock.hcl
 
 # Ansible secrets and dynamic inventory
+ansible/inventory
 ansible/inventory.ini
 *.retry
 

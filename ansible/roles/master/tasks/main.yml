@@ -30,10 +30,10 @@
     group: ubuntu
     mode: '0600'
 
-- name: Deploy Flannel Pod Network CNI
+- name: Deploy Calico Pod Network CNI
   become: yes
   become_user: ubuntu
-  command: kubectl apply -f {{ cni_flannel_manifest_url }}
+  command: kubectl apply -f {{ cni_calico_manifest_url }}
   when: not kubeadmin_init_check.stat.exists
 
 - name: Generate join command token for worker nodes

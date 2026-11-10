@@ -87,13 +87,13 @@ flowchart TD
 │       └── compute/               # EC2 Instances for Control Plane & Worker nodes
 ├── ansible/                       # Multi-Role Cluster Configuration Management
 │   ├── ansible.cfg                # Ansible defaults & privilege escalation
-│   ├── inventory.ini.example      # Cluster inventory template
+│   ├── inventory.example          # Cluster inventory template
 │   ├── cluster-setup.yml          # Master orchestration playbook
 │   └── roles/
 │       ├── common/                # OS hardening, swap disabling, kernel modules, sysctl k8s tuning
 │       ├── containerd/            # Container runtime setup with systemd cgroup driver
 │       ├── kubernetes_base/       # Official pkgs.k8s.io repo, kubelet, kubeadm, kubectl
-│       ├── master/                # kubeadm init, CNI Flannel rollout, join token extraction
+│       ├── master/                # kubeadm init, CNI Calico rollout, join token extraction
 │       └── worker/                # Worker node automated cluster join
 ├── k8s-manifests/                 # Declarative Kubernetes Manifests (GitOps Source of Truth)
 │   └── base/
@@ -137,7 +137,7 @@ Located in [`terraform/`](./terraform), Terraform provisions the complete AWS fo
 - **VPC Module**: Dedicated CIDR `172.31.0.0/16`, public subnets across 2 Availability Zones, Internet Gateway, and Route Tables.
 - **Security Module**: Explicit security groups allowing SSH (`22`), Kubernetes API server (`6443`), NodePort service range (`30000-32767`), and unrestricted intra-cluster VPC traffic for CNI pod networking.
 - **Compute Module**: Provisions Ubuntu 22.04 LTS instances for `master` (control-plane) and `worker` nodes with `gp3` storage.
-- **Dynamic Inventory**: Generates an Ansible inventory file (`ansible/inventory.ini`) automatically upon `terraform apply`.
+- **Dynamic Inventory & Automated Execution**: Automatically generates the Ansible inventory file (`ansible/inventory`) and triggers `ansible-playbook -i inventory cluster-setup.yml` via a `null_resource` local-exec provisioner once Terraform completes provisioning the infrastructure.
 
 ```bash
 cd terraform/environments/prod
@@ -152,12 +152,12 @@ Located in [`ansible/`](./ansible), an automated multi-role Ansible playbook con
 1. **Role: `common`**: Disables swap permanently, loads `overlay` and `br_netfilter` kernel modules, and enables `net.ipv4.ip_forward`.
 2. **Role: `containerd`**: Installs Docker's `containerd.io`, generates default config, and enables `SystemdCgroup = true`.
 3. **Role: `kubernetes_base`**: Configures the official Kubernetes repository (`pkgs.k8s.io`), installs `kubelet`, `kubeadm`, and `kubectl`, and holds package versions.
-4. **Role: `master`**: Runs `kubeadm init`, configures kubeconfig permissions for the administrative user, deploys Flannel CNI, and exports join credentials.
+4. **Role: `master`**: Runs `kubeadm init`, configures kubeconfig permissions for the administrative user, deploys Calico CNI (`v3.28.0`), and exports join credentials.
 5. **Role: `worker`**: Receives the join token from master and securely attaches to the cluster.
 
 ```bash
 cd ansible
-ansible-playbook -i inventory.ini cluster-setup.yml
+ansible-playbook -i inventory cluster-setup.yml
 ```
 
 ---
@@ -200,9 +200,10 @@ terraform apply
 ```
 
 ### 2. Bootstrap Kubernetes Cluster
+*(Automated automatically by Terraform `local-exec` provisioner, or manually via):*
 ```bash
 cd ../../../ansible
-ansible-playbook -i inventory.ini cluster-setup.yml
+ansible-playbook -i inventory cluster-setup.yml
 ```
 
 Verify nodes on the master node:
