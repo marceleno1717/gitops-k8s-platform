@@ -8,6 +8,13 @@ crash.*.log
 .terraform/
 .terraform.lock.hcl
 
+# Keys and environment secrets
+*.pem
+*.key
+.env
+*.env
+!*.env.example
+
 # Ansible secrets and dynamic inventory
 ansible/inventory
 ansible/inventory.ini

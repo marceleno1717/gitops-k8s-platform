@@ -1,0 +1,35 @@
+namespace: ivolve
+
+app:
+  name: ivolveapp
+  replicaCount: 2
+  image:
+    repository: marceleno17/ivolveapp
+    tag: "8"
+    pullPolicy: IfNotPresent
+  service:
+    name: ivolveappsvc
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+    nodePort: 30080
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+
+mysql:
+  name: ivolvedb
+  serviceName: ivolvedbsvc
+  image: mysql:8.0
+  port: 3306
+  database: ivolve
+  user: admin
+  password: "adminpassword123"
+  rootPassword: "rootpassword123"
+  storage:
+    size: 2Gi
+    accessMode: ReadWriteOnce

@@ -25,7 +25,16 @@ pipeline {
             }
         }
 
-        stage('2. Build, Scan & Push Docker Image') {
+        stage('2. Automated Unit & Smoke Tests') {
+            steps {
+                echo "Executing automated Node.js unit and route smoke tests..."
+                dir('app') {
+                    testJS()
+                }
+            }
+        }
+
+        stage('3. Build, Scan & Push Docker Image') {
             steps {
                 echo "Building, scanning with Trivy, and pushing Docker image..."
                 dir('app') {
@@ -34,7 +43,7 @@ pipeline {
             }
         }
 
-        stage('3. GitOps Push to Repo') {
+        stage('4. GitOps Push to Repo') {
             steps {
                 echo "Triggering GitOps flow: updating manifest and committing back to Git repository..."
                 pushDeployment(

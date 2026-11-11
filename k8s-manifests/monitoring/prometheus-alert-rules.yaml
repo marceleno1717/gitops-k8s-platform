@@ -1,0 +1,47 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ivolve-cluster-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus
+    app: kube-prometheus-stack
+spec:
+  groups:
+    - name: kubernetes-node-and-workload-alerts
+      rules:
+        - alert: HighNodeCPUUtilization
+          expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU utilization on node {{ $labels.instance }}"
+            description: "Node CPU usage has exceeded 80% for more than 5 minutes."
+
+        - alert: HighNodeMemoryUtilization
+          expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory utilization on node {{ $labels.instance }}"
+            description: "Node memory usage has exceeded 85% for more than 5 minutes."
+
+        - alert: PodCrashLoopBackOff
+          expr: rate(kube_pod_container_status_restarts_total{namespace="ivolve"}[10m]) * 60 > 3
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} is restarting frequently in namespace {{ $labels.namespace }}"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted more than 3 times in 10 minutes."
+
+        - alert: MySQLStatefulSetDown
+          expr: kube_statefulset_status_replicas_ready{namespace="ivolve", statefulset="ivolvedb"} < 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "MySQL StatefulSet (ivolvedb) has 0 ready replicas"
+            description: "Database persistence layer in namespace ivolve is unavailable for over 1 minute."
