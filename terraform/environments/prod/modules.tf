@@ -28,37 +28,16 @@ module "compute" {
   worker_count         = var.worker_count
 }
 
-# Auto-generate dynamic Ansible inventory file (named 'inventory')
-resource "local_file" "ansible_inventory" {
-  filename        = "${path.module}/../../../ansible/inventory"
-  file_permission = "0644"
-  content         = <<-EOT
-[master]
-${module.compute.master_public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=${var.ssh_private_key_path} internal_ip=${module.compute.master_private_ip}
-
-[workers]
-%{ for index, ip in module.compute.worker_public_ips ~}
-${ip} ansible_user=ubuntu ansible_ssh_private_key_file=${var.ssh_private_key_path} internal_ip=${module.compute.worker_private_ips[index]}
-%{ endfor ~}
-
-[k8s_cluster:children]
-master
-workers
-EOT
-}
-
-# Automatically wait for SSH and execute the Ansible cluster bootstrapping playbook
+# Automatically wait for cloud-init and execute the Ansible cluster bootstrapping playbook via dynamic EC2 inventory
 resource "null_resource" "ansible_provisioner" {
   depends_on = [
-    local_file.ansible_inventory,
     module.compute
   ]
 
-  # Trigger re-execution if instances or inventory content changes
+  # Trigger re-execution if instance IPs change
   triggers = {
-    master_ip    = module.compute.master_public_ip
-    worker_ips   = join(",", module.compute.worker_public_ips)
-    inventory_id = local_file.ansible_inventory.id
+    master_ip  = module.compute.master_public_ip
+    worker_ips = join(",", module.compute.worker_public_ips)
   }
 
   provisioner "local-exec" {
@@ -66,7 +45,7 @@ resource "null_resource" "ansible_provisioner" {
       echo "Waiting 60 seconds for cloud instances SSH and cloud-init to become fully ready..."
       sleep 60
       cd ${path.module}/../../../ansible
-      ansible-playbook -i inventory cluster-setup.yml
+      ansible-playbook -i inventory.aws_ec2.yaml cluster-setup.yml --private-key ${var.ssh_private_key_path}
     EOT
   }
 }

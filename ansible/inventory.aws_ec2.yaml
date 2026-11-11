@@ -1,0 +1,16 @@
+---
+plugin: amazon.aws.aws_ec2
+regions:
+  - eu-west-3
+filters:
+  instance-state-name: running
+  tag:ansible: "true"
+hostnames:
+  - ip-address
+compose:
+  ansible_user: "'ubuntu'"
+  internal_ip: private_ip_address
+groups:
+  master: "ec2_tags.Role | default('') == 'master'"
+  workers: "ec2_tags.Role | default('') == 'worker'"
+  k8s_cluster: "ec2_tags.Role | default('') in ['master', 'worker']"

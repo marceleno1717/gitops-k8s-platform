@@ -18,6 +18,6 @@ output "worker_private_ips" {
   value = module.compute.worker_private_ips
 }
 
-output "ansible_inventory_path" {
-  value = local_file.ansible_inventory.filename
+output "ansible_dynamic_inventory" {
+  value = "ansible/inventory.aws_ec2.yaml"
 }

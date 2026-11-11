@@ -86,8 +86,9 @@ flowchart TD
 │       ├── security/              # Fine-grained Security Groups (K8s API, NodePort, Internal CNI)
 │       └── compute/               # EC2 Instances for Control Plane & Worker nodes
 ├── ansible/                       # Multi-Role Cluster Configuration Management
-│   ├── ansible.cfg                # Ansible defaults & privilege escalation
-│   ├── inventory.example          # Cluster inventory template
+│   ├── ansible.cfg                # Ansible defaults, dynamic AWS EC2 inventory plugin config
+│   ├── inventory.aws_ec2.yaml     # Dynamic AWS EC2 inventory definition (filters tag:ansible="true")
+│   ├── inventory.example          # Static cluster inventory reference template
 │   ├── cluster-setup.yml          # Master orchestration playbook
 │   └── roles/
 │       ├── common/                # OS hardening, swap disabling, kernel modules, sysctl k8s tuning
@@ -136,8 +137,8 @@ docker compose -f docker-compose/docker-compose.yaml up -d --build
 Located in [`terraform/`](./terraform), Terraform provisions the complete AWS foundation in region `eu-west-3`:
 - **VPC Module**: Dedicated CIDR `172.31.0.0/16`, public subnets across 2 Availability Zones, Internet Gateway, and Route Tables.
 - **Security Module**: Explicit security groups allowing SSH (`22`), Kubernetes API server (`6443`), NodePort service range (`30000-32767`), and unrestricted intra-cluster VPC traffic for CNI pod networking.
-- **Compute Module**: Provisions Ubuntu 22.04 LTS instances for `master` (control-plane) and `worker` nodes with `gp3` storage.
-- **Dynamic Inventory & Automated Execution**: Automatically generates the Ansible inventory file (`ansible/inventory`) and triggers `ansible-playbook -i inventory cluster-setup.yml` via a `null_resource` local-exec provisioner once Terraform completes provisioning the infrastructure.
+- **Compute Module**: Provisions Ubuntu 22.04 LTS instances for `master` (control-plane) and `worker` nodes with `gp3` storage, tagged with `ansible: "true"` and `Role: "master"` / `Role: "worker"`.
+- **Dynamic EC2 Inventory & Automated Execution**: Uses Ansible's native `amazon.aws.aws_ec2` dynamic inventory plugin (`inventory.aws_ec2.yaml`) filtering on EC2 tag `tag:ansible: "true"`. Once Terraform completes provisioning, a `null_resource` local-exec provisioner automatically triggers `ansible-playbook -i inventory.aws_ec2.yaml cluster-setup.yml --private-key <key_path>`.
 
 ```bash
 cd terraform/environments/prod
@@ -203,10 +204,11 @@ terraform apply
 ```
 
 ### 2. Bootstrap Kubernetes Cluster
-*(Automated automatically by Terraform `local-exec` provisioner, or manually via):*
+*(Automated automatically by Terraform `local-exec` provisioner using dynamic EC2 inventory, or manually via):*
 ```bash
 cd ../../../ansible
-ansible-playbook -i inventory cluster-setup.yml
+ansible-inventory -i inventory.aws_ec2.yaml --graph
+ansible-playbook -i inventory.aws_ec2.yaml cluster-setup.yml --private-key ~/.ssh/k3s.pem
 ```
 
 Verify nodes on the master node:

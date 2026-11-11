@@ -29,7 +29,8 @@ resource "aws_instance" "master" {
 
   tags = {
     Name        = "${var.project_name}-master"
-    Role        = "control-plane"
+    Role        = "master"
+    ansible     = "true"
     Environment = var.environment
   }
 }
@@ -52,6 +53,7 @@ resource "aws_instance" "worker" {
   tags = {
     Name        = "${var.project_name}-worker-${count.index + 1}"
     Role        = "worker"
+    ansible     = "true"
     Environment = var.environment
   }
 }
